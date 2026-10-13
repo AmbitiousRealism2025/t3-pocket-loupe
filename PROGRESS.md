@@ -4,8 +4,8 @@ The memory of the `/goal` run. Updated after every step. Never write real host n
 
 ## Current state
 
-- **Milestone:** M3 done (committing); M4 live service already installed and checked.
-- **Next:** commit and push M3; restart the service on the new code; then GLM review 4 on the M4 files (`tools/install-service.sh`, README, CHANGELOG, device-test.md, HANDOFF.md), one fix round, final checks, final push with HANDOFF.md.
+- **Milestone:** all done: M0–M4 complete, HANDOFF.md written.
+- **Next:** nothing for the build run. The person: install on the iPhone and work through HANDOFF.md §3, recording results in device-test.md.
 
 ## Decisions made during the run
 
@@ -45,9 +45,10 @@ The memory of the `/goal` run. Updated after every step. Never write real host n
 - [x] the service is active and survives `systemctl --user restart`: `tools/install-service.sh` → `node: v26.10.0`, `tailnet port 8443 is free`, `local: http://127.0.0.1:8443/ping answers`, `443 mapping unchanged`; then `systemctl --user restart t3-pocket-loupe` → `active` / `enabled`, `/healthz` → `{"ok":true,"collector":"running",…}`, live `/api/state`: `environments=2 states={"live":1,"tunnel_missing":1} rows=13` (counts only). (First run 2026-10-13 ~02:54 UTC; re-checked after the final commit, see Log.)
 - [x] `tailscale serve status` shows 443 unchanged and 8443 → 127.0.0.1:8443: `|-- / proxy http://127.0.0.1:3773` and `…:8443 (tailnet only) |-- / proxy http://127.0.0.1:8443`; JSON compare with a private pre-install snapshot → `443 unchanged: true`, `TCP ports: 443,8443`
 - [x] `nixweb check . --level 2 --target http://127.0.0.1:8443 --url https://<tailnet-name>:8443` reports no automated failures: `No automated failures for Level 2. 5 rule(s) could not be verified.` exit 0; with `--level 3 --only NW-NET-007`: `✓ NW-NET-007 SHOULD The tailnet HTTPS edge delivers what loopback does`
-- [ ] the README is complete
-- [ ] the final privacy scan passes
-- [ ] GLM review 4 + one fix round, final push, HANDOFF.md pushed
+- [x] the README is complete: what it is, screenshots, how it works, requirements, install (origin and manifest id stated, NW-NET-005), security model, development, related projects (T3 Loupe, nixweb.app), license; claims checked by review 4
+- [x] the final privacy scan passes: `tools/privacy-scan.sh` → `passed`, run before the final commit and again on the pushed commit (see Log)
+- [x] GLM review 4 + one fix round, final push, HANDOFF.md pushed (see Reviews and Log)
+- Final re-check before the last commit: `npm test` → 51/51; `nixweb check . --level 2 --target http://127.0.0.1:8443 --url https://<tailnet-name>:8443` → `No automated failures for Level 2. 5 rule(s) could not be verified.` exit 0; `systemctl --user is-active t3-pocket-loupe` → `active`; serve status → `443 unchanged: true | 8443 -> http://127.0.0.1:8443 | TCP: 443,8443`
 
 - `/ping` answers **200** (the standard and checker require 200; PLAN §3.2 said 204).
 - CSP adds `object-src 'none'` (NW-SEC-001 requires it).
@@ -100,10 +101,18 @@ The memory of the `/goal` run. Updated after every step. Never write real host n
   5. Low: the 25 s ping and 10-minute expiry had no tests. New hub tests with small timings.
   6. Low: the 512 and maskable icons weren't precached. They replace the SVG favicon in the precache list (still 12 files).
   - Shell VERSION bumped to `pl-0.1.1` (public/ changed after the M2 commit). After the round: `npm test` 51/51, `tools/nixweb-check.sh` → `No automated failures for Level 2.`, screenshots regenerated (update flow `pl-0.1.1 → pl-9.9.9-update-test after one tap`), no leftover processes.
+- **M4:** GLM-5.3 (pi, `zai/glm-5.3`, thinking max), clientRequestId `pocket-loupe-review-m4`, completed ~03:45 UTC. It ran `npm test` (51/51), the checker, inspected the live unit and serve status. No high or medium findings; the unit, the no-clobber logic, README and HANDOFF claims were confirmed against the code and the live system. All six low findings accepted and fixed in the one round:
+  1. The installer read a failed `tailscale serve status` as "port free". It now refuses with a clear message; `After=tailscaled.service` (inert in a user unit) removed.
+  2. Missing `ss`/`curl` failed soft. They're required up front now.
+  3. `--uninstall` could leave a stale 8443 mapping if the unit was already stopped. It now removes the mapping itself, only when it's ours.
+  4. device-test.md lacked a row for NW-DEV-009 (and NW-DAT-005, NW-DEV-008). Added.
+  5. The NW-DAT-004 row missed the Safari-storage half. Added (device-test.md and HANDOFF).
+  6. HANDOFF named a detail of the real setup (an SSH-tunnelled machine). Replaced with a generic line.
+  - After the round: the fixed installer re-run over the live install → `tailnet port 8443 already maps to http://127.0.0.1:8443`, `443 mapping unchanged`, exit 0; `npm test` 51/51.
 
 ## Blocked
 
-(nothing)
+Nothing. No check failed three times; every "Done when" is ticked with evidence.
 
 ## Log
 
@@ -114,3 +123,5 @@ The memory of the `/goal` run. Updated after every step. Never write real host n
 - 2026-10-13: M1 committed (`cf54052`) and pushed; public repo created.
 - 2026-10-13: M2 review round applied (both reviews), screens regenerated.
 - 2026-10-13: M2 committed (`6f5033d`) and pushed. M3: SSE hub `lib/events.ts` wired into `server.ts`; update-flow check in the screenshot harness; checks green.
+- 2026-10-13: M3 committed (`ecd1697`) and pushed; service restarted on it (serves `pl-0.1.1`). M4 accessibility pass: a headless-Chrome audit of `#/`, three thread screens and a machine screen at 390×844 → every button/link has an accessible name and is ≥44×44 px, one `h1`, a live region present (`problems: []` on all five). Theme colours come from `/api/theme` through Palette.derive (dark and light screenshots). README, CHANGELOG, VENDOR.md, device-test.md (empty template) and a HANDOFF.md draft written. Next: GLM review 4.
+- 2026-10-13: M4 review round applied; installer re-run over the live install (exit 0); final checks green; committing M4 with HANDOFF.md.
