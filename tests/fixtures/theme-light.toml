@@ -1,0 +1,12 @@
+# A light Omarchy colors.toml (Rose Pine Dawn style), for screenshots and tests.
+mode = "light"
+accent = "#286983"
+background = "#faf4ed"
+foreground = "#575279"
+muted = "#9893a5"
+red = "#b4637a"
+green = "#56949f"
+yellow = "#ea9d34"
+cyan = "#56949f"
+blue = "#286983"
+magenta = "#907aa9"

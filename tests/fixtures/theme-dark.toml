@@ -1,0 +1,12 @@
+# A Tokyo Night style Omarchy colors.toml, for screenshots and tests.
+mode = "dark"
+accent = "#7aa2f7"
+background = "#1a1b26"
+foreground = "#c0caf5"
+muted = "#565f89"
+red = "#f7768e"
+green = "#9ece6a"
+yellow = "#e0af68"
+cyan = "#7dcfff"
+blue = "#7aa2f7"
+magenta = "#bb9af7"

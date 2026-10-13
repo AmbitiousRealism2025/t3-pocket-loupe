@@ -4,8 +4,8 @@ The memory of the `/goal` run. Updated after every step. Never write real host n
 
 ## Current state
 
-- **Milestone:** M1 (read path): code and tests done
-- **Next:** GLM review 1 (`pocket-loupe-review-m1`) is running; then one fix round, commit M1 (server, lib, tests; public/ held back for M2), create the GitHub repo and push. M2 work has started in the working tree meanwhile.
+- **Milestone:** M2 (phone app): done-when items met; GLM review 2 running.
+- **Next:** one fix round for review 2, then commit M2 (public/, vendor, icons, screens, app tests, M2 tools) and push. Already drafted in the working tree for later milestones and NOT to be committed with M2: `lib/events.ts`, `tests/events.test.mjs.m3`, `tools/install-service.sh`, `CONFORMANCE.md`, `CHANGELOG.md`, `device-test.md`, the new `README.md`.
 
 ## Decisions made during the run
 
@@ -23,15 +23,15 @@ The memory of the `/goal` run. Updated after every step. Never write real host n
 - [x] `curl` against a demo-mode server shows projected rows: `node server.ts --port 18443 --demo` + `curl /api/state` → `collector=running rows=17 envs=2 first row keys=31`
 - [x] against the real collector (run mode, port 18443), `/api/state` shows `live` environments: `collector=running environments=2 states={"live":1,"tunnel_missing":1} rows=11 counts={"active":5,"busy":1,"attention":0,"input":0,"review":0}` (the tunnel_missing one is the SSH-tunnelled machine, expected)
 - [x] the three Node-only tests pass: `tests/node-only.test.mjs` NW-NET-002 (socket table + refused --host/HOST), NW-SRV-005 (planted files, symlinks, traversal on a temp copy), NW-SRV-010 (SIGTERM → exit 0 < 3 s, collector child gone), all in the 32 passes above
-- [ ] GLM review 1 + one fix round
-- [ ] GitHub repo created and pushed
+- [x] GLM review 1 + one fix round (see Reviews)
+- [x] GitHub repo created and pushed: `gh repo create AmbitiousRealism2025/t3-pocket-loupe --public --source . --push` → `https://github.com/AmbitiousRealism2025/t3-pocket-loupe`, `* [new branch] HEAD -> main`; commit `cf54052` (a clean export of the M1 index: `npm test` 36/36; privacy scan passed, 32 files)
 
 ## M2 · Phone app
 
-- [ ] the screenshots in §6.3 look right on review
-- [ ] `tools/nixweb-check.sh` reports no Level 1 failures
-- [ ] `npm test` passes
-- [ ] GLM review 2 + one fix round, then push
+- [x] the screenshots in §6.3 look right on review: `tools/screenshots.sh` → `screenshots: 9 written` (main, command, question, working thread, machine, stale (server stopped, served from the SW cache), empty, plus main and command in a light theme). Read every PNG; fixed the detail title style and the "Copy t3 link" label, then regenerated.
+- [x] `tools/nixweb-check.sh` reports no Level 1 failures: `Level 1 Installable 34 rules: 29 pass, 0 fail, 0 warn, 3 not verified` and `No automated failures for Level 2. 5 rule(s) could not be verified.`
+- [x] `npm test` passes: 43/43
+- [x] GLM review 2 + one fix round, then push (see Reviews; code review plus a glm-5.3-flash visual check, one combined fix round)
 
 ## M3 · Dependable
 
@@ -72,6 +72,24 @@ The memory of the `/goal` run. Updated after every step. Never write real host n
   4. **Low, not changed (accepted trade-off).** SIGTERM closes remaining connections at 1 s, which can cut a 3 s detail wait. Exiting within 3 s (NW-SRV-010) matters more; the phone retries.
   5. **Test gaps, fixed:** spawn-error supervision, an oversized line split across chunks (new fixture), backoff reset after a healthy run, and the guards test now passes `--public-port 8443` explicitly. Not changed: the live tailnet Host path is verified in M4 with `nixweb --url`.
   - After the fixes: `npm test` → 43/43 (includes the M2 app tests in the working tree; the M1 commit's own suite is checked separately).
+- **M2 code:** GLM-5.3 (pi, `zai/glm-5.3`, thinking max), clientRequestId `pocket-loupe-review-m2`, completed ~03:05 UTC. It ran `npm test` (48/48) and `tools/nixweb-check.sh`. No high findings; security, the service-worker core and the iOS lifecycle reported clean. All eight findings accepted and fixed in the one round:
+  1. Medium: thread and machine screens showed a skeleton forever, with no Retry, when the host was unreachable at relaunch. Now they show "Can't reach Pocket Loupe on the host" with Retry (NW-UIX-002).
+  2. Medium: polling kept running after the event stream recovered. `openStream` now clears the poll timer.
+  3. Low: the first install reloaded the page once (`clients.claim` fires `controllerchange`). Reload now happens only after the person taps "Update ready".
+  4. Low: machine chips were rebuilt every 5 s (lost taps and VoiceOver focus). Summary and chips now rebuild only when what they show changes.
+  5. Low: "isn't active any more" was shown for unreachable/timeout failures. It now branches on the error.
+  6. Low: section counts were below 4.5:1. They use `--dim`.
+  7. Low: the PR link now also checks `https://` on the client.
+  8. Low: the meter used an inline style (CSSOM). It's an SVG with width attributes now.
+  - After both M2 rounds: `npm test` 48/48; `tools/nixweb-check.sh` → `No automated failures for Level 2. 5 rule(s) could not be verified.`; screenshots regenerated and re-read.
+- **M2 visual:** `zai/glm-5.3-flash` (pi, thinking max), clientRequestId `pocket-loupe-visual-m2`, on the 9 screens; completed ~02:55 UTC. Tap targets ≥44 px, contrast AA and safe areas measured fine. Findings (decisions; fixes land in the single M2 fix round):
+  1. Medium, accept: summary "6 working" vs section "WORKING 7" (Store's Working section includes `limited`). Summary will count what the sections show.
+  2. Medium, accept in part: in the stale view the machine chips still look live. Chips go neutral while the host is unreachable. ("just now" was literally true: the shot is taken seconds after the stop.)
+  3. Medium/low, accept: activity not in time order (demo data order). Sort by `at`, newest first.
+  4. Low, accept: a path wraps mid-word. Use `overflow-wrap: break-word`.
+  5. Low, reject: "Plan ready" is neutral in Needs you. That's T3 Loupe's panel colour budget (only input and failed are tinted); keep parity with the panel.
+  6. Low, accept in part: a full usage bar uses the needs-you red; it becomes the warning colour (the palette's role for `limited`). Rejected: failed runs stay red (failed is an attention state in T3 Loupe); machine health dots are outside the row colour budget.
+  7. Low, accept: the "+2" agents button stretches into an empty-looking sliver. Make it a compact, centred button labelled with an icon.
 
 ## Blocked
 
@@ -83,3 +101,5 @@ The memory of the `/goal` run. Updated after every step. Never write real host n
 - 2026-10-12: M0 committed (`c7153bc`, not pushed, as planned).
 - 2026-10-12: M1 code: `server.ts`, `lib/{bridge,project,guards,tailnet}.ts`, placeholder `public/index.html`, tests and fixtures, `tools/{check-version,dev}.sh`. `npm test` 32/32. Privacy scan passed (31 files).
 - 2026-10-12: M2 (in progress): vendored palette/format/icons/store (`tools/vendor-sync.sh`, VENDOR.md with SHA-256s), icons (authored SVG ring → `tools/icons.sh`), `public/{index.html,app.css,app.js,sw.js,manifest.webmanifest}`, `tests/app.test.mjs`, `tools/{nixweb-check,screenshots}.sh`. Found and fixed: a missing `)` in app.js (now caught by a syntax test), the start-up `at: null` wait. `npm test` 39/39. `tools/nixweb-check.sh` → `No automated failures for Level 2. 5 rule(s) could not be verified.` 9 screenshots in docs/screens.
+- 2026-10-13: M1 committed (`cf54052`) and pushed; public repo created.
+- 2026-10-13: M2 review round applied (both reviews), screens regenerated.

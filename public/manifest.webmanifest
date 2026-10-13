@@ -1,0 +1,17 @@
+{
+  "id": "/",
+  "name": "T3 Pocket Loupe",
+  "short_name": "Pocket Loupe",
+  "description": "A read-only view of your T3 Code agents across every machine T3 Loupe is paired with.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "theme_color": "#16161e",
+  "background_color": "#16161e",
+  "lang": "en",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

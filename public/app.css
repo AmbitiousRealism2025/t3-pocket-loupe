@@ -1,0 +1,458 @@
+/* T3 Pocket Loupe. One screen at a time; the page never scrolls, lists scroll in their box.
+   Colours are custom properties: these defaults are T3 Loupe's palette (lib/Palette.js)
+   derived for a dark and a light surface; app.js replaces them with the host's Omarchy
+   theme from /api/theme. Only three meanings earn a hue: needs you, working, done-unseen. */
+
+:root {
+  color-scheme: dark;
+  --bg: #16161e;
+  --surface: #1e1e28;
+  --raised: #242530;
+  --selected: #262c41;
+  --line: #2c2d3a;
+  --track: #292a36;
+  --text: #c0caf5;
+  --dim: #8a90b0;
+  --faint: #686c85;
+  --accent: #7aa2f7;
+  --accent-ink: #7aa2f7;
+  --attention: #f7768e;
+  --attention-ink: #f7768e;
+  --success: #9ece6a;
+  --success-ink: #9ece6a;
+  --warning: #e0af68;
+  --warning-ink: #e0af68;
+  --info: #8cb8b1;
+  --subagent: #bb9af7;
+  --focus: #7aa2f7;
+  --pad: 1rem;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+    --bg: #f5f5f7;
+    --surface: #ededf0;
+    --raised: #e6e6e8;
+    --selected: #dde3f3;
+    --line: #d7d7d9;
+    --track: #dfdfe2;
+    --text: #1d1d22;
+    --dim: #626266;
+    --faint: #8d8d91;
+    --accent: #2e5bd8;
+    --accent-ink: #2e5bd8;
+    --attention: #c4233d;
+    --attention-ink: #c4233d;
+    --success: #1f7a3a;
+    --success-ink: #1f7a3a;
+    --warning: #8a5a00;
+    --warning-ink: #8a5a00;
+    --info: #0b6e8a;
+    --subagent: #7b3fb5;
+    --focus: #2e5bd8;
+  }
+}
+
+html {
+  height: 100%;
+  overflow: hidden;
+  /* WHY: Safari inflates text in landscape unless text-size-adjust is pinned (NW-SHL-008). */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  /* WHY: no rubber-band bounce on the page itself; only the list scrolls (NW-SHL-003). */
+  overscroll-behavior: none;
+  background: var(--bg);
+  font-size: 100%;
+}
+
+/* Follow the iPhone's Larger Text setting where Safari supports it (unverified in installed apps). */
+@supports (font: -apple-system-body) {
+  html { font: -apple-system-body; }
+}
+
+body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  /* WHY: as on html: the page never scrolls or bounces (NW-SHL-003). */
+  overscroll-behavior: none;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-sizing: border-box;
+  /* WHY: viewport-fit=cover puts content under the notch, Dynamic Island and home indicator;
+     each inset is added to real padding so phones without a notch still get breathing room. */
+  padding-top: calc(env(safe-area-inset-top) + 0.5rem);
+  /* WHY: landscape on a notched iPhone makes the side insets non-zero. */
+  padding-right: calc(env(safe-area-inset-right) + 0px);
+  /* WHY: see above. */
+  padding-left: calc(env(safe-area-inset-left) + 0px);
+  /* WHY: keeps the footer clear of the home indicator. */
+  padding-bottom: calc(env(safe-area-inset-bottom) + 0.25rem);
+}
+
+/* ---- chrome: header, machine chips, banner, footer ---- */
+
+.bar, .machines, .foot, .stale-banner {
+  /* WHY: dragging on chrome must not start a text selection; content stays selectable (NW-SHL-007). */
+  user-select: none;
+  /* WHY: Safari still needs the prefixed property. */
+  -webkit-user-select: none;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem var(--pad) 0.5rem;
+  min-height: 2.75rem;
+}
+
+.heading { flex: 1; min-width: 0; }
+
+h1 {
+  margin: 0;
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.summary {
+  margin: 0.125rem 0 0;
+  color: var(--dim);
+  font-size: 0.9375rem;
+}
+
+.summary .needs { color: var(--attention-ink); font-weight: 600; }
+
+button, a, .chip, .row-main {
+  /* WHY: removes the double-tap-to-zoom delay on controls only; pan and pinch keep working (NW-SHL-006). */
+  touch-action: manipulation;
+  /* WHY: iOS paints a grey flash on tap; our own :active and focus styles replace it. */
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+input, select, textarea { font-size: 1rem; }
+
+.back, .update, .retry, .action {
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+  padding: 0 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.back { border: 0; background: transparent; color: var(--accent-ink); padding-left: 0.25rem; }
+.back span { font-size: 1.5rem; line-height: 1; vertical-align: -0.1em; }
+.update { border-color: var(--accent); color: var(--accent-ink); }
+
+.machines {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0 var(--pad) 0.5rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  /* WHY: a sideways swipe on the chips must not drag the page. */
+  overscroll-behavior: contain;
+}
+.machines:empty { display: none; }
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: none;
+  min-height: 2.75rem;
+  padding: 0 0.875rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.9375rem;
+}
+
+.dot {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 50%;
+  flex: none;
+  background: var(--faint);
+}
+.dot.ok { background: var(--success); }
+.dot.warn { background: var(--warning); }
+.dot.bad { background: var(--attention); }
+.dot.unknown { background: transparent; border: 2px solid var(--faint); box-sizing: border-box; }
+
+.stale-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0 var(--pad) 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--warning);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.9375rem;
+}
+.stale-banner:not(.on) { display: none; }
+.stale-banner span { flex: 1; }
+
+.foot {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.375rem var(--pad) 0.25rem;
+  color: var(--dim);
+  font-size: 0.8125rem;
+  border-top: 1px solid var(--line);
+}
+
+/* ---- the scrolling list ---- */
+
+.list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  /* WHY: scrolling the list must not chain into the page and bounce the whole app (NW-SHL-003). */
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scroll-padding-top: 3rem;
+  scroll-padding-bottom: 1rem;
+  padding: 0 var(--pad) 1.5rem;
+}
+
+section { margin-top: 0.75rem; }
+
+h2 {
+  margin: 0.75rem 0 0.375rem;
+  color: var(--dim);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+h2 .count { color: var(--dim); font-weight: 600; margin-left: 0.25rem; }
+
+ul.rows { list-style: none; margin: 0; padding: 0; }
+.rows li { margin: 0 0 0.375rem; display: flex; align-items: stretch; gap: 0.375rem; }
+.rows li.child { margin-left: 1.25rem; }
+
+.row-main {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 1.5rem 1fr auto;
+  column-gap: 0.625rem;
+  align-items: start;
+  min-height: 3.5rem;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 0.875rem;
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+}
+.row-main:active { background: var(--raised); }
+.row-main .icon { margin-top: 0.125rem; }
+.row-title { font-weight: 600; overflow-wrap: anywhere; }
+.row-meta { grid-column: 2 / 4; color: var(--dim); font-size: 0.875rem; margin-top: 0.125rem; overflow-wrap: anywhere; }
+.row-time { color: var(--dim); font-size: 0.8125rem; white-space: nowrap; padding-left: 0.5rem; font-variant-numeric: tabular-nums; }
+.row-what { grid-column: 2 / 4; margin-top: 0.25rem; display: flex; gap: 0.375rem; align-items: center; font-size: 0.875rem; color: var(--dim); }
+.row-what .what-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.alarm { color: var(--attention-ink); font-weight: 600; }
+.unseen { color: var(--success-ink); font-weight: 600; }
+
+.agents {
+  flex: none;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  padding: 0 0.5rem;
+  border-radius: 0.875rem;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--dim);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+.agents[aria-expanded="true"] { color: var(--accent-ink); border-color: var(--accent); }
+
+.fold {
+  width: 100%;
+  min-height: 2.75rem;
+  border: 1px dashed var(--line);
+  border-radius: 0.875rem;
+  background: transparent;
+  color: var(--dim);
+  font-size: 0.9375rem;
+  text-align: left;
+  padding: 0 0.75rem;
+}
+
+.icon { width: 1.25rem; height: 1.25rem; flex: none; }
+.role-attention { color: var(--attention); }
+.role-accent { color: var(--accent); }
+.role-success { color: var(--success); }
+.role-warning { color: var(--warning); }
+.role-dim { color: var(--dim); }
+
+/* ---- messages: loading, empty, error, collector problems ---- */
+
+.message {
+  margin: 2.5rem auto 0;
+  max-width: 22rem;
+  text-align: center;
+  color: var(--dim);
+}
+.message .icon { width: 2.5rem; height: 2.5rem; color: var(--faint); }
+.message h2 { color: var(--text); font-size: 1.125rem; text-transform: none; letter-spacing: 0; margin: 0.75rem 0 0.375rem; }
+.message p { margin: 0 0 1rem; }
+
+.notice {
+  margin: 0.75rem 0 0;
+  padding: 0.75rem;
+  border-radius: 0.875rem;
+  border: 1px solid var(--attention);
+  background: var(--surface);
+  color: var(--text);
+}
+.notice strong { display: block; margin-bottom: 0.25rem; }
+
+.skeleton div {
+  height: 3.75rem;
+  margin: 0.75rem 0 0;
+  border-radius: 0.875rem;
+  background: var(--surface);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+@keyframes pulse { 50% { opacity: 0.55; } }
+
+/* ---- detail and machine screens ---- */
+
+.card {
+  margin: 0.75rem 0 0;
+  padding: 0.75rem;
+  border-radius: 0.875rem;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+.card h2 { margin-top: 0; }
+.card.pending { border-color: var(--attention); }
+
+.detail-title { margin: 0.5rem 0 0.25rem; color: var(--text); font-size: 1.25rem; font-weight: 700; text-transform: none; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.facts { margin: 0; color: var(--dim); font-size: 0.9375rem; }
+.state-line { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; font-weight: 600; }
+
+pre.command {
+  margin: 0.5rem 0;
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.625rem;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--text);
+  font: 0.875rem/1.45 ui-monospace, "SF Mono", Menlo, monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.options { margin: 0.25rem 0 0.5rem; padding-left: 1.25rem; color: var(--text); }
+.options li { margin: 0.125rem 0; }
+.question { margin: 0.25rem 0; font-weight: 600; }
+
+.links { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; }
+a.action {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+.events { list-style: none; margin: 0; padding: 0; }
+.events li { display: flex; gap: 0.5rem; align-items: flex-start; padding: 0.375rem 0; border-top: 1px solid var(--line); }
+.events li:first-child { border-top: 0; }
+.events .ev-label { flex: 1; min-width: 0; overflow-wrap: break-word; word-break: normal; }
+.events .ev-time { color: var(--dim); font-size: 0.8125rem; white-space: nowrap; }
+
+.meter { display: block; width: 100%; height: 0.5rem; margin: 0.375rem 0; border-radius: 999px; overflow: hidden; }
+.meter-track { fill: var(--track); }
+.meter-fill { fill: var(--accent); }
+.meter.hot .meter-fill { fill: var(--warning); }
+.meter-label { display: flex; justify-content: space-between; gap: 0.5rem; font-size: 0.875rem; color: var(--dim); }
+.meter-label strong { color: var(--text); font-weight: 600; }
+
+.runs { display: block; width: 100%; height: 3.5rem; margin-top: 0.25rem; }
+.runs .bar-ok { fill: var(--faint); }
+.runs .bar-failed { fill: var(--attention); }
+.runs .bar-running { fill: var(--accent); }
+
+.provider { margin-top: 0.75rem; }
+.provider:first-of-type { margin-top: 0.25rem; }
+.provider-name { font-weight: 600; }
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---- focus, motion, failure ---- */
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+h1:focus, h2:focus { outline: none; }
+h1:focus-visible, h2:focus-visible { outline: 3px solid var(--focus); }
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton div { animation: none; }
+  * { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+}
+
+.crash {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  box-sizing: border-box;
+  /* WHY: the error screen covers the whole display, so it needs the insets too. */
+  padding: calc(env(safe-area-inset-top) + 2rem) calc(env(safe-area-inset-right) + 1.5rem) calc(env(safe-area-inset-bottom) + 2rem) calc(env(safe-area-inset-left) + 1.5rem);
+  background: var(--bg);
+  color: var(--text);
+  text-align: center;
+}
+.crash[hidden] { display: none; }
+.crash button { min-height: 2.75rem; padding: 0 1.25rem; border-radius: 0.75rem; border: 1px solid var(--accent); background: var(--surface); color: var(--accent-ink); font-weight: 600; }
+
+.noscript { padding: 2rem; color: var(--text); }
+
+[hidden] { display: none !important; }

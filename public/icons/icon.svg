@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- T3 Pocket Loupe: the T3 Loupe activity ring as a loupe. Needs-you segment in red,
+       working in full ink, the rest faint; a handle at lower right. -->
+  <rect width="512" height="512" rx="112" fill="#16161e"/>
+  <g fill="none" stroke-linecap="round" stroke-width="40" transform="rotate(-90 232 232)">
+    <circle cx="232" cy="232" r="128" stroke="#f7768e" stroke-dasharray="214.5 589.8" stroke-dashoffset="-13.4"/>
+    <circle cx="232" cy="232" r="128" stroke="#c0caf5" stroke-dasharray="299.4 504.9" stroke-dashoffset="-268.1"/>
+    <circle cx="232" cy="232" r="128" stroke="#565f89" stroke-dasharray="192.1 612.1" stroke-dashoffset="-607.7"/>
+  </g>
+  <line x1="338" y1="338" x2="410" y2="410" stroke="#c0caf5" stroke-width="44" stroke-linecap="round"/>
+  <circle cx="232" cy="232" r="22" fill="#7aa2f7"/>
+</svg>

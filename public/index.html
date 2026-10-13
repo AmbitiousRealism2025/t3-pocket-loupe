@@ -4,8 +4,50 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Pocket Loupe</title>
+<meta name="description" content="A read-only view of your T3 Code agents across every machine T3 Loupe is paired with.">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#16161e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Pocket Loupe">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="app.css">
+<script type="module" src="app.js"></script>
 </head>
 <body>
-<main><h1>Pocket Loupe</h1><p>The phone app arrives in milestone M2.</p></main>
+<div class="app" id="app">
+  <header class="bar" id="bar">
+    <button type="button" class="back" id="back" hidden aria-label="Back to all threads"><span aria-hidden="true">‹</span> Back</button>
+    <div class="heading">
+      <h1 id="title" tabindex="-1">Pocket Loupe</h1>
+      <p class="summary" id="summary">Loading…</p>
+    </div>
+    <button type="button" class="update" id="update" hidden>Update ready</button>
+  </header>
+  <div class="machines" id="machines" role="group" aria-label="Machines"></div>
+  <div class="stale-banner" id="stale-banner" role="status" aria-live="polite">
+    <span id="stale-text"></span>
+    <button type="button" class="retry" id="stale-retry" hidden>Retry</button>
+  </div>
+  <main class="list" id="main" aria-busy="true">
+    <div class="skeleton" aria-hidden="true"><div></div><div></div><div></div></div>
+  </main>
+  <footer class="foot">
+    <span id="updated">Not updated yet</span>
+    <span aria-hidden="true">·</span>
+    <span id="version">pl-0.1.0</span>
+  </footer>
+  <p class="sr-only" id="announce" aria-live="polite"></p>
+</div>
+<div class="crash" id="crash" role="alert" hidden>
+  <h2>Something went wrong</h2>
+  <p id="crash-text">Pocket Loupe hit an error it couldn't recover from.</p>
+  <button type="button" id="crash-reload">Reload</button>
+</div>
+<noscript><p class="noscript">Pocket Loupe needs JavaScript to show your T3 threads.</p></noscript>
 </body>
 </html>

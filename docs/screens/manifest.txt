@@ -1,0 +1,11 @@
+# Written by tools/screenshots.mjs. Synthetic demo data only.
+mode: demo
+be3704a2f177b1dcd48afe57e13e7f953792c8d1afa6f4fd5106da425da48dc3  main-dark.png
+702895fe9014542e74a9024604e84dfe7628e79898a4a5bab6c5301aa40bdac5  thread-command-dark.png
+7bf88b4cf15d45fcadbe592a487e53077b607fbf0915893b3266ce7979124690  thread-question-dark.png
+d2c3ab1a1ce4d2167f267e26ecb5977191e6bffb54678a978911c1287843599c  thread-working-dark.png
+3ca72ea010fa25fcb66491cc5cc5201e2d3d45e3d7477f22dd9e2a0896ca87b2  machine-dark.png
+af5160465519a6b434cf543210b74d74b58f23ab0aaae343406ce2416fd0e2b6  stale-dark.png
+1601fabbf1f10c048b686d358a45c06271f9e7577402621052a2abcc6c962506  empty-dark.png
+768390cd0fb7a35da18deb4cb259e5b9dcfb5652f7a23eabb1bc67f688208da6  main-light.png
+645c7220ed6bbb6c2fbb007e5a041e9edfdec0fc5443be4be37963e963941856  thread-command-light.png
