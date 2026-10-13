@@ -4,8 +4,8 @@ The memory of the `/goal` run. Updated after every step. Never write real host n
 
 ## Current state
 
-- **Milestone:** M2 (phone app): done-when items met; GLM review 2 running.
-- **Next:** one fix round for review 2, then commit M2 (public/, vendor, icons, screens, app tests, M2 tools) and push. Already drafted in the working tree for later milestones and NOT to be committed with M2: `lib/events.ts`, `tests/events.test.mjs.m3`, `tools/install-service.sh`, `CONFORMANCE.md`, `CHANGELOG.md`, `device-test.md`, the new `README.md`.
+- **Milestone:** M3 done (committing); M4 live service already installed and checked.
+- **Next:** commit and push M3; restart the service on the new code; then GLM review 4 on the M4 files (`tools/install-service.sh`, README, CHANGELOG, device-test.md, HANDOFF.md), one fix round, final checks, final push with HANDOFF.md.
 
 ## Decisions made during the run
 
@@ -35,16 +35,16 @@ The memory of the `/goal` run. Updated after every step. Never write real host n
 
 ## M3 · Dependable
 
-- [ ] `tools/nixweb-check.sh` reports no Level 2 failures
-- [ ] `npm test` passes, including the SSE tests
-- [ ] the stale banner is shown in a screenshot taken with the server stopped
-- [ ] GLM review 3 + one fix round, then push
+- [x] `tools/nixweb-check.sh` reports no Level 2 failures: `Level 2 Dependable 60 rules: 41 pass, 0 fail, 0 warn, 2 not verified, 6 not applicable, 11 need a person` / `No automated failures for Level 2. 5 rule(s) could not be verified.` (the 5: NW-NET-001/-002, NW-SRV-005, NW-SRV-010 covered by tests/node-only.test.mjs; NW-NET-004 looks for a `nixweb-<name>` unit, ours is `t3-pocket-loupe.service`)
+- [x] `npm test` passes, including the SSE tests: 48/48 (`tests/events.test.mjs`: first event with projection and no secrets, ≥1 s between events, 9th stream 503 and slot reuse, SIGTERM ends streams and exits 0, Host/method guards)
+- [x] the stale banner is shown in a screenshot taken with the server stopped: `docs/screens/stale-dark.png`, taken by `tools/screenshots.sh` after the service worker was controlling and had cached `/api/state`, the server was stopped and the page reloaded (shell and state from the SW cache, `/ping` refused). Also new: an end-to-end update-flow check → `screenshots: update flow ok (pl-0.1.0 → pl-9.9.9-update-test after one tap)` and `update-ready-dark.png`. A headless-Chrome check confirmed live updates arrive over the stream (one `/api/state` fetch, footer stays "Updated just now" over 15 s).
+- [x] GLM review 3 + one fix round, then push (see Reviews)
 
 ## M4 · Polish and go live
 
-- [ ] the service is active and survives `systemctl --user restart`
-- [ ] `tailscale serve status` shows 443 unchanged and 8443 → 127.0.0.1:8443
-- [ ] `nixweb check . --level 2 --target http://127.0.0.1:8443 --url https://<tailnet-name>:8443` reports no automated failures
+- [x] the service is active and survives `systemctl --user restart`: `tools/install-service.sh` → `node: v26.10.0`, `tailnet port 8443 is free`, `local: http://127.0.0.1:8443/ping answers`, `443 mapping unchanged`; then `systemctl --user restart t3-pocket-loupe` → `active` / `enabled`, `/healthz` → `{"ok":true,"collector":"running",…}`, live `/api/state`: `environments=2 states={"live":1,"tunnel_missing":1} rows=13` (counts only). (First run 2026-10-13 ~02:54 UTC; re-checked after the final commit, see Log.)
+- [x] `tailscale serve status` shows 443 unchanged and 8443 → 127.0.0.1:8443: `|-- / proxy http://127.0.0.1:3773` and `…:8443 (tailnet only) |-- / proxy http://127.0.0.1:8443`; JSON compare with a private pre-install snapshot → `443 unchanged: true`, `TCP ports: 443,8443`
+- [x] `nixweb check . --level 2 --target http://127.0.0.1:8443 --url https://<tailnet-name>:8443` reports no automated failures: `No automated failures for Level 2. 5 rule(s) could not be verified.` exit 0; with `--level 3 --only NW-NET-007`: `✓ NW-NET-007 SHOULD The tailnet HTTPS edge delivers what loopback does`
 - [ ] the README is complete
 - [ ] the final privacy scan passes
 - [ ] GLM review 4 + one fix round, final push, HANDOFF.md pushed
@@ -56,6 +56,8 @@ The memory of the `/goal` run. Updated after every step. Never write real host n
 - Ids must match `^(?!\.)[A-Za-z0-9._:-]{1,120}$` (no leading dot, so never `..`).
 - A POST with a chunked body gets 405 (body never read); only a declared Content-Length over 64 KiB gets 413.
 - Protocol mismatch: the bridge kills the child and keeps retrying with backoff; the status stays `protocol_mismatch` until a v1 line arrives.
+- **What Host header `tailscale serve` forwards (PLAN §3.3, checked at runtime 2026-10-13):** the client's own Host, unchanged. Through the edge: default Host (`<name>:8443`) → 200, `<name>` without port → 200, a spoofed `Host: evil.example` → **421** from our server, `Host: 127.0.0.1:8443` → 200. So the allowlist sees what the phone sent, and DNS rebinding through the edge is refused too.
+- Linger is not enabled (`loginctl show-user` → `Linger=no`): the unit starts at login (`WantedBy=default.target`), which is when the desktop runs anyway. Enabling linger is left to the user (HANDOFF.md).
 - Visual second opinions (from the user, 2026-10-12): `glm-5.3-flash` has vision. For M2–M4, the GLM-5.3 code review is paired with a `zai/glm-5.3-flash` look at `docs/screens/`, launched together and answered in the same single fix round.
 - Vendored T3 Loupe libraries are wrapped as ES modules by `tools/vendor-sync.sh` (pragma dropped, `export {…}` appended); the app reuses `Store.visibleRows(rows, "active", …)` so the order and grouping match the panel exactly. Subagent children fold under their parent behind a "+N" button unless they need attention.
 - The checker flags any element id containing "fatal"/"banner"/"alert" without a live role, so the error screen uses `crash-*` ids (it has `role="alert"` itself).
@@ -90,6 +92,14 @@ The memory of the `/goal` run. Updated after every step. Never write real host n
   5. Low, reject: "Plan ready" is neutral in Needs you. That's T3 Loupe's panel colour budget (only input and failed are tinted); keep parity with the panel.
   6. Low, accept in part: a full usage bar uses the needs-you red; it becomes the warning colour (the palette's role for `limited`). Rejected: failed runs stay red (failed is an attention state in T3 Loupe); machine health dots are outside the row colour budget.
   7. Low, accept: the "+2" agents button stretches into an empty-looking sliver. Make it a compact, centred button labelled with an icon.
+- **M3:** GLM-5.3 (pi, `zai/glm-5.3`, thinking max), clientRequestId `pocket-loupe-review-m3`, completed ~03:20 UTC. It ran `npm test` (48/48), the checker, and live probes of the hub (33 s stream, compressed expiry, a stalled reader, a crashing collector). Hub races, caps, guards, the iOS lifecycle and the update flow reported clean. All six findings accepted and fixed in the one round:
+  1. Medium: no backpressure on stream writes (a stalled reader buffered 19 MB in 9.5 s with a 2 MB state). Now frames are skipped while the socket isn't draining (at most about one frame buffered), the latest state is sent on drain, and a stream stalled for 60 s is closed. New test: a ~1 MB-per-frame stalled reader peaks within 2.5 frames and is closed.
+  2. Medium-low: the service worker's cache-first fetch had no timeout (NW-OFF-011). It uses the bounded `fetchWithin` now.
+  3. Low: `tools/screenshots.mjs` leaked servers, Chromes and temp folders when a step threw. It tracks and removes them on any exit. The leftovers from my early failed runs (three `--port 0` demo servers, four headless Chromes, five temp profiles; all mine, all loopback) were removed; the live service was untouched.
+  4. Low: CONFORMANCE.md listed NW-NET-004 under "verified by our own tests". Moved to a "checked by hand at go-live" section.
+  5. Low: the 25 s ping and 10-minute expiry had no tests. New hub tests with small timings.
+  6. Low: the 512 and maskable icons weren't precached. They replace the SVG favicon in the precache list (still 12 files).
+  - Shell VERSION bumped to `pl-0.1.1` (public/ changed after the M2 commit). After the round: `npm test` 51/51, `tools/nixweb-check.sh` → `No automated failures for Level 2.`, screenshots regenerated (update flow `pl-0.1.1 → pl-9.9.9-update-test after one tap`), no leftover processes.
 
 ## Blocked
 
@@ -103,3 +113,4 @@ The memory of the `/goal` run. Updated after every step. Never write real host n
 - 2026-10-12: M2 (in progress): vendored palette/format/icons/store (`tools/vendor-sync.sh`, VENDOR.md with SHA-256s), icons (authored SVG ring → `tools/icons.sh`), `public/{index.html,app.css,app.js,sw.js,manifest.webmanifest}`, `tests/app.test.mjs`, `tools/{nixweb-check,screenshots}.sh`. Found and fixed: a missing `)` in app.js (now caught by a syntax test), the start-up `at: null` wait. `npm test` 39/39. `tools/nixweb-check.sh` → `No automated failures for Level 2. 5 rule(s) could not be verified.` 9 screenshots in docs/screens.
 - 2026-10-13: M1 committed (`cf54052`) and pushed; public repo created.
 - 2026-10-13: M2 review round applied (both reviews), screens regenerated.
+- 2026-10-13: M2 committed (`6f5033d`) and pushed. M3: SSE hub `lib/events.ts` wired into `server.ts`; update-flow check in the screenshot harness; checks green.

@@ -13,6 +13,7 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Bridge, ID_PATTERN } from "./lib/bridge.ts";
+import { EventHub } from "./lib/events.ts";
 import { crossSite, HostAllowlist, resolveStatic, securityHeaders, sendFile, sendJson, sendText } from "./lib/guards.ts";
 import { parseThemeColors, projectDetail, projectState } from "./lib/project.ts";
 
@@ -62,7 +63,7 @@ function themeFile(): string {
   return process.env.POCKET_LOUPE_THEME_FILE || join(homedir(), ".local/state/omarchy/current/theme/colors.toml");
 }
 
-export function createApp(bridge: Bridge, hosts: HostAllowlist) {
+export function createApp(bridge: Bridge, hosts: HostAllowlist, events: EventHub) {
   async function threadDetail(res: ServerResponse, rawEnv: string, rawThread: string) {
     let envId: string, threadId: string;
     try {
@@ -124,6 +125,7 @@ export function createApp(bridge: Bridge, hosts: HostAllowlist) {
     }
     if (path === "/api/state") return sendJson(res, 200, projectState(bridge), "no-cache");
     if (path === "/api/theme") return theme(res);
+    if (path === "/api/events") return events.open(req, res);
     const thread = /^\/api\/thread\/([^/]+)\/([^/]+)$/.exec(path);
     if (thread) return threadDetail(res, thread[1], thread[2]);
     if (api) return sendJson(res, 404, { error: "not_found" });
@@ -146,7 +148,8 @@ async function main() {
   const bridge = new Bridge({ mode: options.demo ? "demo" : "run" });
   const hosts = new HostAllowlist([options.port, options.publicPort], options.hosts);
   await hosts.refresh();
-  const handle = createApp(bridge, hosts);
+  const events = new EventHub(bridge);
+  const handle = createApp(bridge, hosts, events);
 
   const server = createServer({ requestTimeout: 15_000, headersTimeout: 10_000, keepAliveTimeout: 5_000, maxHeaderSize: 16 * 1024 }, (req, res) => {
     handle(req, res).catch(() => {
@@ -165,6 +168,7 @@ async function main() {
     if (closing) return;
     closing = true;
     setTimeout(() => process.exit(0), 2500).unref();
+    events.closeAll();
     server.close();
     server.closeIdleConnections();
     setTimeout(() => server.closeAllConnections(), 1000).unref();

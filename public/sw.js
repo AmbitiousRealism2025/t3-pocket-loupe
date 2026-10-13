@@ -6,7 +6,7 @@
 //   marked with X-From-Cache so the app can say it's showing old data.
 // - Everything else under /api/, /ping and /healthz: network only, never cached.
 // Bump VERSION whenever any file in public/ changes (tools/check-version.sh enforces it).
-const VERSION = 'pl-0.1.0';
+const VERSION = 'pl-0.1.1';
 const PREFIX = 'pocket-loupe-';
 const SHELL_CACHE = PREFIX + 'shell-' + VERSION;
 const API_CACHE = PREFIX + 'api-' + VERSION;
@@ -23,9 +23,10 @@ const SHELL = [
   'vendor/icons.js',
   'vendor/store.js',
   'manifest.webmanifest',
-  'icons/icon.svg',
   'icons/apple-touch-icon.png',
   'icons/icon-192.png',
+  'icons/icon-512.png',
+  'icons/icon-maskable-512.png',
 ];
 
 self.addEventListener('install', (event) => {
@@ -114,5 +115,5 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   if (url.pathname.startsWith('/api/')) return;
-  event.respondWith(caches.match(request, { ignoreSearch: true }).then((hit) => hit || fetch(request)));
+  event.respondWith(caches.match(request, { ignoreSearch: true }).then((hit) => hit || fetchWithin(request, API_TIMEOUT_MS)));
 });

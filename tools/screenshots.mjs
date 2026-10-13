@@ -6,7 +6,7 @@
 // Records every PNG's SHA-256 in <outDir>/manifest.txt with "mode: demo" for the privacy scan.
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -17,10 +17,18 @@ const CHROME = process.env.CHROME || "/usr/bin/google-chrome-stable";
 const FIX = join(ROOT, "tests", "fixtures");
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-function startServer(env) {
+// Everything started or created here, so a failed step still cleans up after itself.
+const cleanup = { procs: new Set(), dirs: new Set() };
+function cleanUp() {
+  for (const proc of cleanup.procs) if (proc.exitCode === null && proc.signalCode === null) { try { proc.kill("SIGTERM"); } catch {} }
+  for (const dir of cleanup.dirs) rmSync(dir, { recursive: true, force: true });
+}
+
+function startServer(env, root = ROOT) {
   const childEnv = { ...process.env, ...env };
   delete childEnv.HOST;
-  const proc = spawn(process.execPath, ["--disable-warning=ExperimentalWarning", join(ROOT, "server.ts"), "--port", "0"], { env: childEnv, stdio: ["ignore", "pipe", "inherit"] });
+  const proc = spawn(process.execPath, ["--disable-warning=ExperimentalWarning", join(root, "server.ts"), "--port", "0"], { env: childEnv, stdio: ["ignore", "pipe", "inherit"] });
+  cleanup.procs.add(proc);
   return new Promise((resolve, reject) => {
     let out = "";
     proc.stdout.on("data", (d) => {
@@ -39,8 +47,10 @@ function startServer(env) {
 
 async function launchChrome() {
   const profile = mkdtempSync(join(tmpdir(), "pocket-loupe-chrome-"));
+  cleanup.dirs.add(profile);
   const proc = spawn(CHROME, ["--headless=new", "--remote-debugging-port=0", `--user-data-dir=${profile}`, "--no-first-run",
     "--no-default-browser-check", "--disable-gpu", "--hide-scrollbars", "--force-color-profile=srgb", "about:blank"], { stdio: "ignore" });
+  cleanup.procs.add(proc);
   let port = null;
   for (let i = 0; i < 100 && !port; i++) {
     await sleep(100);
@@ -142,6 +152,28 @@ async function main() {
   await waitFor("document.querySelector('#stale-banner')?.classList.contains('on')", 15000);
   await shot("stale-dark");
 
+  // The update flow (NW-OFF-009): serve a copy of the app, deploy a new VERSION, and require
+  // "Update ready", then one reload into the new version after the tap.
+  const copy = mkdtempSync(join(tmpdir(), "pocket-loupe-update-"));
+  cleanup.dirs.add(copy);
+  for (const f of ["server.ts", "lib", "public", "package.json"]) cpSync(join(ROOT, f), join(copy, f), { recursive: true });
+  s = await startServer({ POCKET_LOUPE_DEMO: "1", POCKET_LOUPE_THEME_FILE: join(FIX, "theme-dark.toml") }, copy);
+  await open(s.url + "#/", READY_MAIN);
+  await waitFor("navigator.serviceWorker.controller !== null", 10000);
+  const before = await evaluate("document.querySelector('#version').textContent");
+  for (const f of ["public/sw.js", "public/app.js", "public/index.html"]) {
+    const path = join(copy, f);
+    writeFileSync(path, readFileSync(path, "utf8").replaceAll(before, "pl-9.9.9-update-test"));
+  }
+  await evaluate("navigator.serviceWorker.getRegistration().then((r) => r.update())");
+  await waitFor("!document.querySelector('#update').hidden", 15000);
+  await shot("update-ready-dark");
+  await evaluate("window.__marker = 1; document.querySelector('#update').click()");
+  await waitFor("window.__marker === undefined && document.querySelector('#version')?.textContent === 'pl-9.9.9-update-test'", 15000);
+  console.log(`screenshots: update flow ok (${before} → pl-9.9.9-update-test after one tap)`);
+  await s.stop();
+  rmSync(copy, { recursive: true, force: true });
+
   // Empty: a paired machine with nothing running.
   s = await startServer({ POCKET_LOUPE_COLLECTOR: join(FIX, "collector-empty.mjs"), POCKET_LOUPE_THEME_FILE: join(FIX, "theme-dark.toml") });
   await open(s.url + "#/", READY_MAIN);
@@ -162,4 +194,7 @@ async function main() {
   console.log(`screenshots: ${shots.length} written to ${OUT}`);
 }
 
-main().catch((error) => { console.error(error); process.exit(1); });
+main().then(
+  () => { cleanUp(); process.exit(0); },
+  (error) => { console.error(error); cleanUp(); setTimeout(() => process.exit(1), 300); },
+);

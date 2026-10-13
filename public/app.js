@@ -13,7 +13,7 @@ import * as Icons from './vendor/icons.js';
 import * as Palette from './vendor/palette.js';
 import * as Store from './vendor/store.js';
 
-const VERSION = 'pl-0.1.0'; // must equal VERSION in sw.js (a test checks)
+const VERSION = 'pl-0.1.1'; // must equal VERSION in sw.js (a test checks)
 const STALE_AFTER_MS = 90_000;
 const STATE_TIMEOUT_MS = 5000;
 const PING_TIMEOUT_MS = 3000;
