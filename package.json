@@ -1,0 +1,16 @@
+{
+  "name": "t3-pocket-loupe",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "T3 Loupe on your iPhone: a read-only, tailnet-only home-screen web app for T3 Code agents.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "test": "node --disable-warning=ExperimentalWarning --test tests/*.test.mjs",
+    "dev": "tools/dev.sh",
+    "check": "tools/nixweb-check.sh"
+  }
+}
